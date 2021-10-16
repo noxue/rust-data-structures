@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{borrow::Borrow, cell::RefCell, marker::PhantomData, rc::{Rc, Weak}};
 
 /// 节点，用于保存数据
 struct Node<T> {
@@ -50,30 +50,72 @@ impl<T> LinkedList<T> {
         self.head = data;
         self.len += 1;
     }
+
+    // pub fn iter(&self)->Iter<'_, T>{
+    //     let v = &*self.head.unwrap().clone().borrow_mut();
+    //     Iter{ cur: Some(Rc::downgrade(Rc::downgrade(v)))}
+    // }
+
 }
 
+// impl<'a, T> IntoIterator for &'a LinkedList<T>{
+//     type Item = &'a T;
 
+//     type IntoIter = Iter<'a, T>;
+
+//     fn into_iter(self) -> Self::IntoIter {
+        
+//     }
+// }
+
+struct Iter<'a, T: 'a> {
+    // 记录当前遍历的节点
+    cur: Option<Weak<RefCell<&'a Node<T>>>>,
+}
+
+// impl<'a, T> Iterator for Iter<'a, T> {
+//     type Item = &'a T;
+
+//     fn next(&mut self) -> Option<&'a T> {
+//         if let None = self.cur {
+//             return None;
+//         }
+
+//         let v = Some(&self.cur.as_ref().unwrap().clone().borrow_mut().data);
+//         self.cur.as_ref().unwrap().clone().swap(self.cur.as_ref().unwrap());
+
+//         v
+//     }
+// }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use std::borrow::Borrow;
 
     use super::LinkedList;
 
-
     #[test]
-    fn list_new(){
+    fn list_new() {
         let mut list = LinkedList::new();
         list.push("a".to_string());
         list.push("b".to_string());
         list.push("c".to_string());
 
         let mut node = list.head;
-        while let Some(v) = node{
-            
+        while let Some(v) = node {
             println!("{}", v.clone().borrow_mut().data);
             node = v.clone().borrow_mut().next.clone();
         }
     }
-    
+
+    #[test]
+    fn list_iter(){
+        let mut list = LinkedList::new();
+        list.push("a".to_string());
+        list.push("b".to_string());
+        list.push("c".to_string());
+
+        // for v in 
+
+    }
 }
