@@ -1,4 +1,6 @@
-use std::{borrow::Borrow, cell::RefCell, marker::PhantomData, rc::{Rc, Weak}};
+
+
+use std::{borrow::Borrow, cell::RefCell, marker::PhantomData, ops::Deref, rc::{Rc, Weak}};
 
 /// 节点，用于保存数据
 struct Node<T> {
@@ -46,15 +48,16 @@ impl<T> LinkedList<T> {
 
         // 如果链表不为空, 把当前节点的next指向链表第一个节点，然后把当前节点赋值给链表第一个节点
         // 这里要注意使用take，拿到head指向的数据节点的所有权，如果不适用take，后面无法给self.head赋值
-        data.clone().unwrap().borrow_mut().next = self.head.take();
+        RefCell::borrow_mut(&data.clone().unwrap()).next = self.head.take();
         self.head = data;
         self.len += 1;
     }
 
-    // pub fn iter(&self)->Iter<'_, T>{
-    //     let v = &*self.head.unwrap().clone().borrow_mut();
-    //     Iter{ cur: Some(Rc::downgrade(Rc::downgrade(v)))}
-    // }
+ 
+    pub fn iter(&self)->Iter<'_, T>{
+        let v = self.head.as_ref().unwrap().borrow_mut().deref();
+        Iter{ cur: v, marker:PhantomData}
+    }
 
 }
 
@@ -68,9 +71,10 @@ impl<T> LinkedList<T> {
 //     }
 // }
 
-struct Iter<'a, T: 'a> {
+pub struct Iter<'a, T: 'a> {
     // 记录当前遍历的节点
-    cur: Option<Weak<RefCell<&'a Node<T>>>>,
+    cur: Node<&'a T>,
+    marker:PhantomData<Node<&'a T>>
 }
 
 // impl<'a, T> Iterator for Iter<'a, T> {
@@ -81,12 +85,13 @@ struct Iter<'a, T: 'a> {
 //             return None;
 //         }
 
-//         let v = Some(&self.cur.as_ref().unwrap().clone().borrow_mut().data);
-//         self.cur.as_ref().unwrap().clone().swap(self.cur.as_ref().unwrap());
-
-//         v
+//         // let v = Some(&);
+//         // self.cur = Some(self.cur.unwrap());
+        
+//         Some(&RefCell::borrow(self.cur.as_ref().unwrap().as_ptr()).data)
 //     }
 // }
+
 
 #[cfg(test)]
 mod tests {
