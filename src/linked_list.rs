@@ -79,7 +79,7 @@ where
         self.len += 1;
 
         // 如果链表为空，添加为第一个元素
-        if self.len == 0 {
+        if self.head == None {
             self.head = node;
             return;
         }
@@ -183,7 +183,47 @@ where
     }
 
     /// 逆序链表
-    pub fn rev(&mut self) {}
+    /// 参考文章 https://blog.csdn.net/ljyljyok/article/details/77996029
+    pub fn rev(&mut self) -> &Self {
+        let mut head = self.head.unwrap().as_ptr();
+        let head_box = unsafe { Box::from_raw(head) };
+
+        let mut prev = None;
+        let mut next = head_box.next;
+        let mut cur = self.head;
+        head = Box::leak(head_box.into());
+
+        while let Some(v) = cur {
+            unsafe {
+                // cur.next = prev
+                let mut p_cur = v.as_ptr();
+                let mut cur_box = Box::from_raw(p_cur);
+                cur_box.next = prev;
+                p_cur = Box::leak(cur_box.into());
+
+                // prev = cur
+                prev = cur;
+
+                // cur = next
+                cur = next;
+
+                // next = cur.next
+                let mut p_cur = match cur {
+                    Some(v)=>v.as_ptr(),
+                    None=>break
+                };
+                let cur_box = Box::from_raw(p_cur);
+                next = cur_box.next;
+                p_cur = Box::leak(cur_box.into());
+            }
+        }
+
+        // 头指针指向 最后一个节点， 
+        // 循环执行完之后 cur指向 None， prev则是最后一个元素
+        self.head = prev;
+        
+        self
+    }
 
     /// 返回迭代器
     pub fn iter(&self) -> Iter<'_, T> {
@@ -281,5 +321,16 @@ mod tests {
         assert_eq!(Some(3), list.pop());
         assert_eq!(Some(2), list.pop_tail());
         assert_eq!(None, list.pop_tail());
+    }
+
+    #[test]
+    fn list_rev() {
+        let mut list = LinkedList::new();
+        for i in 1..10 {
+            list.push_back(i.to_string());
+        }
+
+        let res: Vec<&String> = list.rev().iter().collect();
+        assert_eq!(vec!["9", "8", "7", "6", "5", "4", "3", "2", "1"], res);
     }
 }
