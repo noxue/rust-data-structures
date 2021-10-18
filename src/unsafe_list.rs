@@ -52,6 +52,9 @@ where
         LinkedList {
             head: None,
             len: 0,
+            // 官方链表中加了，咱也不懂，加就对了，
+            // 貌似是说链表不直接拥有所有元素，
+            // 通过这个告诉编译器，释放内存的时候做一些什么处理。
             marker: PhantomData,
         }
     }
@@ -81,25 +84,30 @@ where
             return;
         }
 
-        // 临时指针，用于每次循环
+        // 临时指针，记录每次循环的节点的指针
         let mut p = self.head;
 
-        loop {
-            let mut flag = false;
+        // 记录是否找到最后一个元素
+        let mut flag = false;
 
+        while !flag {
             let mut cur = p.unwrap().as_ptr();
             let mut t = unsafe { Box::from_raw(cur) };
 
-            let v = t.next;
-            if v == None {
+            // 最后一个元素的next是None
+            if t.next == None {
+                // 把元素追加到最后一个元素后面
                 t.next = node;
+
+                // 修改状态，表示已经找到最后一个元素，处理完毕
                 flag = true;
             }
-            p = v;
+
+            // 每次指针向后移动一个元素
+            p = t.next;
+
+            // 从链表中获取的元素修改之后再放回去，否则链表会报错
             cur = Box::leak(t.into());
-            if flag {
-                break;
-            }
         }
     }
 
@@ -121,13 +129,63 @@ where
         if self.len == 0 {
             return None;
         } else if self.len == 1 {
+            // 一个节点的情况
+            let v = unsafe { Box::from_raw(self.head.unwrap().as_ptr()) };
+            self.head = None;
+            self.len -= 1;
+            return Some(v.data);
         }
-        None
+
+        // 思路：list.next.next == None 就把next返回
+        let mut p = self.head;
+
+        // 记录用于返回的最后一个元素
+        let mut t = None;
+
+        // 记录是否找到最后一个元素
+        let mut flag = false;
+
+        while !flag {
+            // 当前循环的节点
+            let mut p_cur = p.unwrap().as_ptr();
+            let mut cur_box = unsafe { Box::from_raw(p_cur.into()) };
+
+            // 获取当前节点的next
+            let cur_next = cur_box.next;
+            let mut p_cur_next = cur_next.unwrap().as_ptr();
+            let cur_next_box = unsafe { Box::from_raw(p_cur_next.into()) };
+
+            // 如果下一个元素的下一个元素是None，那么下一个元素就是最后一个元素，就结束循环
+            if cur_next_box.next == None {
+                // 下一个元素要被移除，所以下一个元素设置为None
+                cur_box.next = None;
+
+                // 被移除的数据
+                t = Some(cur_next_box.data);
+
+                // 找到最后一个元素了，所以结束循环
+                flag = true;
+            } else {
+                // 如果下一个元素不是最后一个元素，那么就要把指针设置回去，否则报错
+                p_cur_next = Box::leak(cur_next_box.into());
+            }
+
+            // 把当前指针设置回去
+            p_cur = Box::leak(cur_box.into());
+
+            // 如果没找到最后一个元素，那就继续找
+            p = cur_next;
+        }
+
+        // 链表元素个数 -1
+        self.len -= 1;
+        t
     }
 
     /// 逆序链表
     pub fn rev(&mut self) {}
 
+    /// 返回迭代器
     pub fn iter(&self) -> Iter<'_, T> {
         let v = *self.head.as_ref().unwrap();
         Iter {
@@ -225,16 +283,16 @@ mod tests {
         assert_eq!(vec!["c", "a", "b", "d"], res);
     }
 
-    // #[test]
-    // fn list_pop() {
-    //     let mut list = LinkedList::new();
-    //     list.push(1);
-    //     list.push(2);
-    //     list.push(3);
-    //     list.push(4);
+    #[test]
+    fn list_pop() {
+        let mut list = LinkedList::new();
+        list.push(1);
+        list.push(2);
+        list.push(3);
 
-    //     while let Some(v) = list.pop_tail() {
-    //         println!("{:?}", v);
-    //     }
-    // }
+        assert_eq!(Some(1), list.pop_tail());
+        assert_eq!(Some(2), list.pop_tail());
+        assert_eq!(Some(3), list.pop_tail());
+        assert_eq!(None, list.pop_tail());
+    }
 }
