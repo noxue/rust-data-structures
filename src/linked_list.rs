@@ -215,27 +215,14 @@ where
             }
         }
 
+        // 循环释放所有节点，如果出错，会调用上面 DropGuard 的 drop 方法
         while let Some(node) = self.pop() {
-            // println!("drop: {:?}", &node as *const T);
             let guard = DropGuard(self);
             drop(node);
             mem::forget(guard);
         }
     }
 }
-
-// impl<I: Iterator> IntoIterator for I
-// where
-//     I: Debug,
-// {
-//     type Item = I::Item;
-
-//     type IntoIter = I;
-
-//     fn into_iter(self) -> I {
-//         self.iter()
-//     }
-// }
 
 pub struct Iter<'a, T: 'a>
 where
@@ -291,8 +278,8 @@ mod tests {
         list.push(3);
 
         assert_eq!(Some(1), list.pop_tail());
+        assert_eq!(Some(3), list.pop());
         assert_eq!(Some(2), list.pop_tail());
-        assert_eq!(Some(3), list.pop_tail());
         assert_eq!(None, list.pop_tail());
     }
 }
